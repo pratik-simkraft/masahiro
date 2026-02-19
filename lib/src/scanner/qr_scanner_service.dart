@@ -10,38 +10,56 @@ import '../models/scan_models.dart';
 
 /// Isolated scanner service for camera, gallery decode, permissions and flash.
 class QrScannerService {
-  QrScannerService({MobileScannerController? controller, AmbientLight? ambientLight})
-      : _controller =
-            controller ?? MobileScannerController(formats: [BarcodeFormat.qrCode]),
-        _ambientLight = ambientLight ?? AmbientLight();
+  QrScannerService({
+    MobileScannerController? controller,
+    AmbientLight? ambientLight,
+  }) : _controller =
+           controller ??
+           MobileScannerController(formats: [BarcodeFormat.qrCode]),
+       _ambientLight = ambientLight ?? AmbientLight();
 
   final MobileScannerController _controller;
   final AmbientLight _ambientLight;
   final ImagePicker _picker = ImagePicker();
   final Uuid _uuid = const Uuid();
 
-  StreamSubscription<int>? _lightSubscription;
+  StreamSubscription<double>? _lightSubscription;
   bool _userSetTorch = false;
   bool _autoTorchEnabled = false;
+  bool _torchToggleInFlight = false;
 
   MobileScannerController get controller => _controller;
 
-  Future<PermissionStatus> requestCameraPermission() => Permission.camera.request();
+  Future<PermissionStatus> requestCameraPermission() =>
+      Permission.camera.request();
 
   Future<bool> isCameraPermissionGranted() async => Permission.camera.isGranted;
 
   /// Starts ambient light monitoring and auto-enables torch when light is low.
   void startAutoLightMonitoring({int luxThreshold = 20}) {
-    _lightSubscription?.cancel();
-    _lightSubscription = _ambientLight.ambientLightStream.listen((lux) {
-      if (_userSetTorch) return;
+    final previousSubscription = _lightSubscription;
+    if (previousSubscription != null) {
+      unawaited(previousSubscription.cancel());
+    }
+    _lightSubscription = _ambientLight.ambientLightStream.listen((lux) async {
+      if (_userSetTorch || _torchToggleInFlight) return;
       final lowLight = lux <= luxThreshold;
       if (lowLight && !_autoTorchEnabled) {
-        _controller.toggleTorch();
-        _autoTorchEnabled = true;
+        _torchToggleInFlight = true;
+        try {
+          await _controller.toggleTorch();
+          _autoTorchEnabled = true;
+        } finally {
+          _torchToggleInFlight = false;
+        }
       } else if (!lowLight && _autoTorchEnabled) {
-        _controller.toggleTorch();
-        _autoTorchEnabled = false;
+        _torchToggleInFlight = true;
+        try {
+          await _controller.toggleTorch();
+          _autoTorchEnabled = false;
+        } finally {
+          _torchToggleInFlight = false;
+        }
       }
     });
   }

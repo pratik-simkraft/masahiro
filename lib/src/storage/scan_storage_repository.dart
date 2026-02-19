@@ -19,6 +19,13 @@ class ScanStorageRepository {
     await _box.put(scan.id, scan.toMap());
   }
 
+  Future<bool> containsRawContent(String rawContent) async {
+    final normalized = rawContent.trim();
+    return _box.values.any(
+      (item) => (item['rawContent'] as String?)?.trim() == normalized,
+    );
+  }
+
   Future<List<ScanResultData>> fetchAllScans() async {
     final items = _box.values
         .map((item) => ScanResultData.fromMap(item))

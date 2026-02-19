@@ -14,7 +14,7 @@ class QrScannerWidget extends StatefulWidget {
   });
 
   final QrScannerService service;
-  final ValueChanged<ScanResultData> onScan;
+  final Future<void> Function(ScanResultData) onScan;
 
   @override
   State<QrScannerWidget> createState() => _QrScannerWidgetState();
@@ -23,6 +23,8 @@ class QrScannerWidget extends StatefulWidget {
 class _QrScannerWidgetState extends State<QrScannerWidget>
     with WidgetsBindingObserver {
   bool _permissionGranted = false;
+  bool _isScanInProgress = false;
+  String? _lastScannedRawContent;
 
   @override
   void initState() {
@@ -91,10 +93,23 @@ class _QrScannerWidgetState extends State<QrScannerWidget>
 
     return MobileScanner(
       controller: widget.service.controller,
-      onDetect: (capture) {
+      onDetect: (capture) async {
+        if (_isScanInProgress) return;
+
         final result = widget.service.fromBarcodeCapture(capture);
-        if (result != null) {
-          widget.onScan(result);
+        if (result == null) return;
+        if (_lastScannedRawContent == result.rawContent) return;
+
+        _lastScannedRawContent = result.rawContent;
+        _isScanInProgress = true;
+        await widget.service.pauseCamera();
+        try {
+          await widget.onScan(result);
+        } finally {
+          if (mounted) {
+            _isScanInProgress = false;
+            await widget.service.resumeCamera();
+          }
         }
       },
     );

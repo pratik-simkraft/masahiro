@@ -13,7 +13,7 @@ class HomeScreen extends StatelessWidget {
   });
 
   final QrScannerService scannerService;
-  final ValueChanged<ScanResultData> onScan;
+  final Future<void> Function(ScanResultData) onScan;
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +34,7 @@ class HomeScreen extends StatelessWidget {
                 FilledButton.icon(
                   onPressed: () async {
                     final result = await scannerService.scanFromGallery();
-                    if (result != null) onScan(result);
+                    if (result != null) await onScan(result);
                   },
                   icon: const Icon(Icons.photo),
                   label: const Text('Gallery'),

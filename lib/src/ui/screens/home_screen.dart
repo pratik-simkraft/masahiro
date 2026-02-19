@@ -22,10 +22,7 @@ class HomeScreen extends StatelessWidget {
       body: Stack(
         children: [
           Positioned.fill(
-            child: QrScannerWidget(
-              service: scannerService,
-              onScan: onScan,
-            ),
+            child: QrScannerWidget(service: scannerService, onScan: onScan),
           ),
           Positioned(
             left: 16,
@@ -56,15 +53,15 @@ class HomeScreen extends StatelessWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          final status = await Permission.camera.status;
-          if (!context.mounted || status.isGranted) return;
-          _showStrictPermissionDialog(context);
-        },
-        label: const Text('Permission Help'),
-        icon: const Icon(Icons.warning),
-      ),
+      // floatingActionButton: FloatingActionButton.extended(
+      //   onPressed: () async {
+      //     final status = await Permission.camera.status;
+      //     if (!context.mounted || status.isGranted) return;
+      //     _showStrictPermissionDialog(context);
+      //   },
+      //   label: const Text('Permission Help'),
+      //   icon: const Icon(Icons.warning),
+      // ),
     );
   }
 

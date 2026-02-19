@@ -41,6 +41,8 @@ class MasahiroApp extends StatefulWidget {
 
 class _MasahiroAppState extends State<MasahiroApp> {
   late final QrScannerService _scannerService;
+  final GlobalKey<ScaffoldMessengerState> _messengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<ScanResultData> _scans = const [];
 
   @override
@@ -57,9 +59,24 @@ class _MasahiroAppState extends State<MasahiroApp> {
   }
 
   Future<void> _handleScan(ScanResultData scan) async {
+    final alreadyScanned = await widget.storageRepository.containsRawContent(
+      scan.rawContent,
+    );
+
+    if (alreadyScanned) {
+      _messengerKey.currentState?.showSnackBar(
+        const SnackBar(content: Text('Already scanned. Not added to history.')),
+      );
+      return;
+    }
+
     await widget.storageRepository.saveScan(scan);
     await widget.syncService.sendScan(scan);
     await _loadHistory();
+
+    _messengerKey.currentState?.showSnackBar(
+      const SnackBar(content: Text('Scan completed successfully.')),
+    );
   }
 
   Future<void> _handleDelete(String id) async {
@@ -77,6 +94,7 @@ class _MasahiroAppState extends State<MasahiroApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: _messengerKey,
       title: 'Masahiro',
       themeMode: ThemeMode.system,
       theme: ThemeData(
